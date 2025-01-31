@@ -46,6 +46,10 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "dependencies": {
+            "Azure.Identity": {
+              "target": "Package",
+              "version": "[1.13.2, )"
+            },
             "Azure.Security.KeyVault.Secrets": {
               "target": "Package",
               "version": "[4.7.0, )"

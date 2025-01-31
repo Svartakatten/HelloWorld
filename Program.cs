@@ -1,4 +1,5 @@
 ﻿using Microsoft.Azure.Cosmos;
+using Application.Resources;
 
 namespace Application
 {
@@ -6,10 +7,13 @@ namespace Application
     {
         static async Task Main(string[] args)
         {
-            await CreateItem();
+            var secretValue = await KeyVaultConnection.GetSecretValueAsync("podmanagersecure", "CosmosDbSecure");
+            Console.WriteLine($"Secret Value: {secretValue}");
+
+            await CreateItem(secretValue);
         }
 
-        private static async Task CreateItem()
+        private static async Task CreateItem(string cosmosKey)
         {
             var cosmosUrl = "https://cosmosdbservices.documents.azure.com:443/";
             var databaseName = "PodManager";
@@ -21,11 +25,10 @@ namespace Application
             Database database = await client.CreateDatabaseIfNotExistsAsync(databaseName);
             Container container = await database.CreateContainerIfNotExistsAsync(containerName, partitionKeyPath, 400);
 
-            // Create a sample item
             var testItem = new
             {
                 id = Guid.NewGuid().ToString(),
-                partitionKey = "MyTestPkValue", // Match partition key definition
+                partitionKey = "MyTestPkValue",
                 details = "It's working"
             };
 
