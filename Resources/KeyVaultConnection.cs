@@ -1,9 +1,7 @@
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
-using System;
-using System.Threading.Tasks;
 
-namespace Application.Resources
+namespace HelloWorld.Resources
 {
     public static class KeyVaultConnection
     {

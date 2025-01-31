@@ -1,6 +1,6 @@
-namespace Application.Controllers
+namespace HelloWorld.Controllers
 {
-    public class User
+    public class Controller
     {
         public int Hello;
     }

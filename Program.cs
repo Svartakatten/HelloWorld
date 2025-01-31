@@ -1,40 +1,69 @@
 ﻿using Microsoft.Azure.Cosmos;
-using Application.Resources;
+using HelloWorld.Resources;
+using HelloWorld.Data;
+using HelloWorld.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
-namespace Application
+namespace HelloWorld
 {
     class Program
     {
         static async Task Main(string[] args)
         {
-            var secretValue = await KeyVaultConnection.GetSecretValueAsync("podmanagersecure", "CosmosDbSecure");
-            Console.WriteLine($"Secret Value: {secretValue}");
+            var host = CreateHostBuilder(args).Build();
 
-            await CreateItem(secretValue);
+            using var scope = host.Services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<CosmosDbContext>();
+
+            await context.Database.EnsureCreatedAsync(); // Ensure database is created
+
+            // Create and retrieve users
+            await CreateUser(context);
+            await FetchUsers(context);
+
+            await host.RunAsync();
         }
 
-        private static async Task CreateItem(string cosmosKey)
+        private static async Task CreateUser(CosmosDbContext context)
         {
-            var cosmosUrl = "https://cosmosdbservices.documents.azure.com:443/";
-            var databaseName = "PodManager";
-            var containerName = "Podcasts";
-            var partitionKeyPath = "/category";
-
-            CosmosClient client = new CosmosClient(cosmosUrl, cosmosKey);
-
-            Database database = await client.CreateDatabaseIfNotExistsAsync(databaseName);
-            Container container = await database.CreateContainerIfNotExistsAsync(containerName, partitionKeyPath, 400);
-
-            var testItem = new
+            var newUser = new Users
             {
-                id = Guid.NewGuid().ToString(),
-                partitionKey = "MyTestPkValue",
-                details = "It's working"
+                Username = "JohnDoe",
+                Email = "johndoe@example.com",
+                PasswordHash = "hashedpassword123",
+                Role = "Admin",
+                Category = "general"
             };
 
-            var response = await container.CreateItemAsync(testItem, new PartitionKey(testItem.partitionKey));
+            context.Users.Add(newUser);
+            await context.SaveChangesAsync();
 
-            Console.WriteLine($"Item created with status code: {response.StatusCode}");
+            Console.WriteLine($"User {newUser.Username} created successfully!");
         }
+        private static async Task FetchUsers(CosmosDbContext context)
+        {
+            var users = await context.Users.ToListAsync();
+
+            foreach (var user in users)
+            {
+                Console.WriteLine($"User: {user.Username}, Email: {user.Email}");
+            }
+        }
+        public static IHostBuilder CreateHostBuilder(string[] args) =>
+            Host.CreateDefaultBuilder(args)
+                .ConfigureServices(async (hostContext, services) =>
+                {
+                    string vaultName = "podmanagersecure";
+                    string secretName = "CosmosDbSecure";
+                    string cosmosDbKey = await KeyVaultConnection.GetSecretValueAsync(vaultName, secretName);
+
+                    string cosmosDbEndpoint = "https://cosmosdbservices.documents.azure.com:443/";
+                    string databaseName = "PodManager";
+
+                    services.AddDbContext<CosmosDbContext>(options =>
+                        options.UseCosmos(cosmosDbEndpoint, cosmosDbKey, databaseName));
+                });
     }
 }
